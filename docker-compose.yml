@@ -1,0 +1,11 @@
+version: '3'
+services:
+  react-native:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "8081:8081"
+    environment:
+      - NODE_ENV=development
+    command: npm start
