@@ -1,20 +1,23 @@
-# Use an official Node runtime as a parent image
-FROM node:14
+# Use an official Python runtime as a parent image
+FROM python:3.8-slim
 
 # Set the working directory in the container
 WORKDIR /app
 
+# Install Python and necessary dependencies
+RUN apt-get update && \
+    apt-get install -y python3.8 python3-pip && \
+    pip3 install --upgrade pip && \
+    pip3 install deeppavlov fastapi pydantic uvicorn
+
 # Copy the current directory contents into the container at /app
 COPY . .
 
-# Install any needed packages specified in package.json
-RUN npm install
+# Copy DeepPavlov configuration file
+COPY deep_pavlov_config.json /app/deeppavlov_config.json
 
-# Install react-native CLI globally
-RUN npm install -g react-native-cli
+# Expose ports for FastAPI server
+EXPOSE 5000
 
-# Expose port 8081 for React Native Packager
-EXPOSE 8081
-
-# Command to run when the container starts
-CMD ["npm", "start"]
+# Command to start FastAPI server
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5000"]

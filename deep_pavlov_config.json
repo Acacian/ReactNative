@@ -1,0 +1,54 @@
+{
+  "dataset_reader": {
+    "class_name": "snips_intents_dataset_reader",
+    "data_path": "path_to_data"
+  },
+  "dataset_iterator": {
+    "class_name": "basic_classification_iterator",
+    "seed": 42,
+    "split_seed": 23
+  },
+  "chainer": {
+    "in": ["x"],
+    "out": ["y_pred"],
+    "pipe": [
+      {
+        "class_name": "go_bot",
+        "state_size": 512,
+        "dropout_rate": 0.1,
+        "embedder": {
+          "class_name": "fasttext",
+          "load_path": "ft_native_300_ru_wiki_lenta_lemmatize.bin"
+        },
+        "encoder": {
+          "class_name": "rnn",
+          "cell_type": "lstm",
+          "use_attention": true
+        },
+        "attention_mechanism": {
+          "class_name": "scaled_dot_product",
+          "num_heads": 8
+        },
+        "tokenizer": {
+          "class_name": "stream_spacy_tokenizer",
+          "lemmas": true,
+          "case_sensitive": false
+        },
+        "main": true
+      }
+    ]
+  },
+  "train": {
+    "epochs": 10,
+    "batch_size": 64,
+    "metrics": [
+      {
+        "name": "f1"
+      }
+    ],
+    "validation_patience": 5,
+    "val_every_n_epochs": 1,
+    "log_every_n_batches": 100,
+    "tb_log_dir": "path_to_log_dir"
+  }
+}
