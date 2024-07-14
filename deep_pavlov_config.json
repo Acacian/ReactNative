@@ -1,54 +1,57 @@
 {
   "dataset_reader": {
-    "class_name": "snips_intents_dataset_reader",
-    "data_path": "path_to_data"
+    "class_name": "basic_classification_reader",
+    "data_path": "/app/downloads/intents/snips",
+    "x": "text",
+    "y": "intent"
   },
   "dataset_iterator": {
     "class_name": "basic_classification_iterator",
     "seed": 42,
-    "split_seed": 23
+    "split_fields": ["train", "valid", "test"]
   },
   "chainer": {
     "in": ["x"],
     "out": ["y_pred"],
     "pipe": [
       {
-        "class_name": "go_bot",
-        "state_size": 512,
-        "dropout_rate": 0.1,
-        "embedder": {
-          "class_name": "fasttext",
-          "load_path": "ft_native_300_ru_wiki_lenta_lemmatize.bin"
-        },
-        "encoder": {
-          "class_name": "rnn",
-          "cell_type": "lstm",
-          "use_attention": true
-        },
-        "attention_mechanism": {
-          "class_name": "scaled_dot_product",
-          "num_heads": 8
-        },
-        "tokenizer": {
-          "class_name": "stream_spacy_tokenizer",
-          "lemmas": true,
-          "case_sensitive": false
-        },
-        "main": true
+        "class_name": "torch_transformers_preprocessor",
+        "vocab_file": "bert-base-uncased",
+        "max_seq_length": 128,
+        "do_lower_case": true,
+        "in": ["x"],
+        "out": ["x"]
+      },
+      {
+        "class_name": "torch_transformers_classifier",
+        "n_classes": 7,
+        "pretrained_bert": "bert-base-uncased",
+        "in": ["x"],
+        "out": ["y_pred"],
+        "save_path": "/app/models/bert_classifier",
+        "bert_config_file": null,
+        "bert_tokenizer_config": null
       }
     ]
   },
   "train": {
-    "epochs": 10,
-    "batch_size": 64,
+    "epochs": 1,
+    "batch_size": 8,
     "metrics": [
       {
-        "name": "f1"
+        "name": "f1",
+        "inputs": ["y_pred", "y"],
+        "backend": "torch"
       }
     ],
     "validation_patience": 5,
-    "val_every_n_epochs": 1,
-    "log_every_n_batches": 100,
-    "tb_log_dir": "path_to_log_dir"
+    "val_every_n_epochs": 0.1,
+    "log_every_n_batches": 10,
+    "validation_metrics": ["f1"],
+    "optimizer": "AdamW",
+    "learning_rate": 5e-5,
+    "weight_decay": 0.01,
+    "bert_learning_rate": 2e-5,
+    "bert_weight_decay": 0.0
   }
 }

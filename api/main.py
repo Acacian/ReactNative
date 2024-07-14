@@ -1,11 +1,20 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from deeppavlov import build_model, configs
+from deeppavlov import build_model
+import os
+
+# 필요한 디렉토리 생성
+downloads_path = "/app/downloads"
+if not os.path.exists(downloads_path):
+    os.makedirs(downloads_path)
+
+models_path = "/app/models"
+if not os.path.exists(models_path):
+    os.makedirs(models_path)
 
 app = FastAPI()
 
-# Using ner_ontonotes as an example model
-model = build_model(configs.ner.ontonotes_bert_mult, download=True)
+model = build_model("/app/deep_pavlov_config.json", download=True)
 
 class Request(BaseModel):
     text: str
