@@ -30,7 +30,8 @@
         "out": ["y_pred"],
         "save_path": "/app/models/bert_classifier",
         "bert_config_file": null,
-        "bert_tokenizer_config": null
+        "bert_tokenizer_config": null,
+        "device": "cuda"
       }
     ]
   },

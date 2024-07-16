@@ -8,10 +8,6 @@ downloads_path = "/app/downloads"
 if not os.path.exists(downloads_path):
     os.makedirs(downloads_path)
 
-models_path = "/app/models"
-if not os.path.exists(models_path):
-    os.makedirs(models_path)
-
 app = FastAPI()
 
 model = build_model("/app/deep_pavlov_config.json", download=True)

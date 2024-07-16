@@ -1,39 +1,36 @@
-# Use an official Python runtime as a parent image
-FROM python:3.8-slim-buster
+# 베이스 이미지로 Ubuntu 20.04를 사용
+FROM ubuntu:20.04
 
-# Install required dependencies and Python packages
+# Install dependencies
 RUN apt-get update && apt-get install -y \
     wget \
-    gnupg2 \
-    software-properties-common \
-    curl \
     unzip \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    libatlas-base-dev \
+    libgomp1 \
+    curl \
+    xvfb \
+    gnupg
 
 # Install Google Chrome
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list && \
+    sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list' && \
     apt-get update && apt-get install -y google-chrome-stable
 
-# Install Python packages
-RUN pip install --upgrade pip && \
-    pip install deeppavlov fastapi pydantic uvicorn torch transformers requests beautifulsoup4 selenium
+# Install chromedriver
+RUN wget -O /tmp/chromedriver.zip https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/116.0.5845.96/linux64/chromedriver-linux64.zip && \
+    unzip /tmp/chromedriver.zip chromedriver-linux64/chromedriver -d /usr/local/bin/
 
-# Set the working directory in the container
-WORKDIR /app
+# Set display port to avoid crash
+ENV DISPLAY=:99
 
-# Copy the current directory contents into the container at /app
-COPY . .
+# Install Python dependencies
+COPY requirements.txt .
+RUN apt-get install -y python3-pip
+RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Set environment variables
-ENV DOWNLOADS_PATH=/app/downloads
+# Copy the rest of the application code
+COPY api /app/api
+COPY deep_pavlov_config.json /app/deep_pavlov_config.json
 
-# Run data collection and training scripts
-RUN python ./api/data_collection.py && \
-    python ./api/train_model.py
-
-# Expose ports for DeepPavlov server
-EXPOSE 5000
-
-# Command to start DeepPavlov server
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5000"]
+# Set the command to run the application
+CMD ["python3", "/app/api/main.py"]

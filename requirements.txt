@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+deeppavlov
+torch
+transformers
+requests
+beautifulsoup4
+selenium==4.10.0
