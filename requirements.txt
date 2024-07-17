@@ -5,4 +5,4 @@ torch
 transformers
 requests
 beautifulsoup4
-selenium==4.10.0
+selenium
