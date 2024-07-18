@@ -1,7 +1,7 @@
 {
   "dataset_reader": {
     "class_name": "basic_classification_reader",
-    "data_path": "/app/downloads/intents/snips",
+    "data_path": "{DOWNLOADS_PATH}/intents/snips",
     "x": "text",
     "y": "intent"
   },
@@ -29,9 +29,8 @@
         "in": ["x"],
         "out": ["y_pred"],
         "save_path": "/app/models/bert_classifier",
-        "bert_config_file": null,
-        "bert_tokenizer_config": null,
-        "device": "cuda"
+        "load_path": "/app/models/bert_classifier",
+        "device": "cpu"
       }
     ]
   },
@@ -41,14 +40,12 @@
     "metrics": [
       {
         "name": "f1",
-        "inputs": ["y_pred", "y"],
-        "backend": "torch"
+        "inputs": ["y_pred", "y"]
       }
     ],
     "validation_patience": 5,
     "val_every_n_epochs": 0.1,
     "log_every_n_batches": 10,
-    "validation_metrics": ["f1"],
     "optimizer": "AdamW",
     "learning_rate": 5e-5,
     "weight_decay": 0.01,
