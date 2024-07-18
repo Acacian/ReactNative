@@ -1,15 +1,18 @@
 import os
 import json
+import logging
 from fastapi import FastAPI
 from pydantic import BaseModel
 from deeppavlov import build_model
 from deeppavlov.core.commands.utils import parse_config
 
+logging.basicConfig(level=logging.INFO)
+
 # DOWNLOADS_PATH 환경 변수 확인 및 설정
 downloads_path = os.getenv('DOWNLOADS_PATH', '/app/downloads')
 os.environ['DOWNLOADS_PATH'] = downloads_path
 
-print(f"DOWNLOADS_PATH: {downloads_path}") 
+logging.info(f"DOWNLOADS_PATH: {downloads_path}")
 
 app = FastAPI()
 
@@ -20,8 +23,10 @@ with open("/app/deep_pavlov_config.json", "r") as config_file:
 # DOWNLOADS_PATH를 직접 대체
 config['dataset_reader']['data_path'] = config['dataset_reader']['data_path'].replace("{DOWNLOADS_PATH}", downloads_path)
 
-# 수정된 config로 모델 빌드
-model = build_model(config, download=True)
+# 수정된 config로 모델 빌드 (download=False로 설정)
+logging.info("Building model...")
+model = build_model(config, download=False)
+logging.info("Model built successfully.")
 
 class Request(BaseModel):
     text: str

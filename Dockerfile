@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libatlas-base-dev \
     libgomp1 \
     xvfb \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # Python 3.8 설치
@@ -50,7 +51,19 @@ RUN mkdir -p $DOWNLOADS_PATH
 # 애플리케이션 코드 복사
 COPY api /app/api
 COPY deep_pavlov_config.json /app/
+COPY api/data_collection.py /app/
+COPY api/train_model.py /app/
 
 WORKDIR /app
 
-CMD DOWNLOADS_PATH=$DOWNLOADS_PATH python3 api/main.py
+# 실행 권한 부여
+RUN chmod +x /app/data_collection.py /app/train_model.py
+
+# 네트워크 연결 확인
+RUN ping -c 4 google.com || echo "Network issue detected"
+
+# 데이터 수집 및 모델 훈련
+RUN python3 data_collection.py || (cat /app/data_collection.log && exit 1)
+RUN python3 train_model.py
+
+CMD ["python3", "api/main.py"]
