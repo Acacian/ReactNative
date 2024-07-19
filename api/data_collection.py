@@ -6,39 +6,36 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
+from webdriver_manager.chrome import ChromeDriverManager
 
-logging.basicConfig(level=logging.DEBUG, filename='/app/data_collection.log', filemode='w')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def fetch_tweets(query, max_tweets=1000):
+def fetch_tweets(query, max_tweets=100, timeout=300):  # 5분 타임아웃
     tweet_texts = []
     url = f"https://twitter.com/search?q={query}&src=typed_query&f=live"
     
     options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
     
-    logging.debug(f"Setting up Chrome driver for query: {query}")
-    service = Service("/usr/local/bin/chromedriver")
+    logging.info(f"Setting up Chrome driver for query: {query}")
+    service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
 
     try:
-        service = Service("/usr/local/bin/chromedriver/chromedriver")
-        driver = webdriver.Chrome(service=service, options=options)
-    except:
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
-    try:
-        logging.debug(f"Navigating to URL: {url}")
+        logging.info(f"Navigating to URL: {url}")
         driver.get(url)
         WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-        logging.debug("Page loaded successfully")
+        logging.info("Page loaded successfully")
 
+        start_time = time.time()
         while len(tweet_texts) < max_tweets:
+            if time.time() - start_time > timeout:
+                logging.warning(f"Timeout reached for query: {query}")
+                break
+
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(2)
 
