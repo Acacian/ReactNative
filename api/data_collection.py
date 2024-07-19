@@ -11,7 +11,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def fetch_tweets(query, max_tweets=100, timeout=300):  # 5분 타임아웃
+def fetch_tweets(query, max_tweets=100, timeout=300):
     tweet_texts = []
     url = f"https://twitter.com/search?q={query}&src=typed_query&f=live"
     
@@ -31,11 +31,7 @@ def fetch_tweets(query, max_tweets=100, timeout=300):  # 5분 타임아웃
         logging.info("Page loaded successfully")
 
         start_time = time.time()
-        while len(tweet_texts) < max_tweets:
-            if time.time() - start_time > timeout:
-                logging.warning(f"Timeout reached for query: {query}")
-                break
-
+        while len(tweet_texts) < max_tweets and time.time() - start_time < timeout:
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(2)
 
@@ -43,14 +39,29 @@ def fetch_tweets(query, max_tweets=100, timeout=300):  # 5분 타임아웃
             soup = BeautifulSoup(page_source, "html.parser")
             tweets = soup.find_all("div", {"data-testid": "tweet"})
 
+            logging.info(f"Found {len(tweets)} tweet divs on the page")
+            
+            if len(tweets) == 0:
+                logging.warning("No tweet divs found. Dumping page source.")
+                with open(f"/app/{query}_page_source.html", "w", encoding="utf-8") as f:
+                    f.write(page_source)
+
             for tweet in tweets:
                 tweet_text = tweet.find("div", {"lang": "ko"})
                 if tweet_text:
-                    tweet_texts.append(tweet_text.get_text())
+                    text = tweet_text.get_text().strip()
+                    if text not in tweet_texts:
+                        tweet_texts.append(text)
+                        logging.info(f"Collected new tweet: {text[:50]}...")
                 if len(tweet_texts) >= max_tweets:
                     break
 
-            logging.info(f"Collected {len(tweet_texts)} tweets for query '{query}'")
+            logging.info(f"Collected {len(tweet_texts)} unique tweets for query '{query}'")
+
+        if len(tweet_texts) == 0:
+            logging.warning(f"No tweets collected for query '{query}'. Saving page source.")
+            with open(f"/app/{query}_final_page_source.html", "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
 
     except Exception as e:
         logging.exception(f"Error fetching tweets for query '{query}': {e}")
@@ -67,6 +78,6 @@ if __name__ == "__main__":
             tweets = fetch_tweets(query)
             for tweet in tweets:
                 file.write(f"{query}: {tweet}\n")
-            logging.info(f"Finished collecting tweets for '{query}'")
+            logging.info(f"Finished collecting tweets for '{query}'. Total tweets: {len(tweets)}")
     
     logging.info("Data collection completed")
