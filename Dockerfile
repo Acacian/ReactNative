@@ -43,6 +43,7 @@ RUN mkdir -p $DOWNLOADS_PATH
 # 애플리케이션 코드 복사
 COPY api /app/api
 COPY deep_pavlov_config.json /app/
+COPY Korean_SNS_DATA /app/Korean_SNS_DATA
 
 WORKDIR /app
 
