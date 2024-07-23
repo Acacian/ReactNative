@@ -8,32 +8,35 @@ type ChatMessageProps = {
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, isBot }) => {
   return (
-    <View style={[styles.container, isBot ? styles.bot : styles.user]}>
-      <Text style={isBot ? styles.botText : styles.userText}>{message}</Text>
+    <View style={[styles.container, isBot ? styles.botContainer : styles.userContainer]}>
+      <Text style={[styles.text, isBot ? styles.botText : styles.userText]}>{message}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 10,
-    marginVertical: 5,
-    borderRadius: 10,
     maxWidth: '80%',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 10,
   },
-  bot: {
-    backgroundColor: '#e0e0e0',
+  botContainer: {
     alignSelf: 'flex-start',
+    backgroundColor: '#E5E5EA',
   },
-  user: {
-    backgroundColor: '#0084ff',
+  userContainer: {
     alignSelf: 'flex-end',
+    backgroundColor: '#007AFF',
+  },
+  text: {
+    fontSize: 16,
   },
   botText: {
     color: '#000',
   },
   userText: {
-    color: '#fff',
+    color: '#FFF',
   },
 });
 
