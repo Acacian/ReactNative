@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Button, StyleSheet } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../App'; // RootStackParamList 타입을 정의한 파일 경로를 설정합니다.
+import { RootStackParamList } from '../App';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -13,7 +13,7 @@ const HomeScreen = ({ navigation }: Props) => {
   return (
     <View style={styles.container}>
       <Button
-        title="Go to Chatbot"
+        title="Start Chatting"
         onPress={() => navigation.navigate('Chatbot')}
       />
     </View>

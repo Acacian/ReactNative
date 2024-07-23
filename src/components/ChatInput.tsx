@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
 type ChatInputProps = {
   onSendMessage: (message: string) => void;
@@ -9,7 +9,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
   const [message, setMessage] = useState('');
 
   const handleSend = () => {
-    if (message.trim().length > 0) {
+    if (message.trim()) {
       onSendMessage(message);
       setMessage('');
     }
@@ -21,9 +21,12 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage }) => {
         style={styles.input}
         value={message}
         onChangeText={setMessage}
-        placeholder="Type a message"
+        placeholder="Type a message..."
+        placeholderTextColor="#999"
       />
-      <Button title="Send" onPress={handleSend} />
+      <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
+        <Text style={styles.sendButtonText}>Send</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -32,15 +35,28 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF',
   },
   input: {
     flex: 1,
-    borderColor: '#ccc',
     borderWidth: 1,
-    borderRadius: 4,
-    padding: 10,
-    marginRight: 10,
+    borderColor: '#DDD',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    fontSize: 16,
+  },
+  sendButton: {
+    marginLeft: 10,
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 20,
+    justifyContent: 'center',
+  },
+  sendButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
   },
 });
 

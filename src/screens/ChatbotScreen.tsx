@@ -1,54 +1,50 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, FlatList, StyleSheet, SafeAreaView } from 'react-native';
+import ChatInput from '../components/ChatInput';
+import ChatMessage from '../components/ChatMessage';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 import AIEngine from '../models/AIEngine';
 
 const ChatbotScreen = () => {
-  const [inputText, setInputText] = useState('');
-  const [responseText, setResponseText] = useState('');
+  const [messages, setMessages] = useState<Array<{ id: string; text: string; isBot: boolean }>>([]);
+  const aiEngine = useRef(new AIEngine()).current;
 
-  const aiEngine = new AIEngine();
+  const handleSendMessage = async (text: string) => {
+    setMessages(prevMessages => [...prevMessages, { id: Date.now().toString(), text, isBot: false }]);
 
-  const handleSend = async () => {
     try {
-      const response = await aiEngine.predict(inputText);
-      setResponseText(response);
+      const response = await aiEngine.sendMessage(text);
+      setMessages(prevMessages => [...prevMessages, { id: (Date.now() + 1).toString(), text: response, isBot: true }]);
     } catch (error) {
-      setResponseText('Error occurred');
+      console.error('Error getting AI response:', error);
+      setMessages(prevMessages => [...prevMessages, { id: (Date.now() + 1).toString(), text: 'Sorry, an error occurred.', isBot: true }]);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Chatbot</Text>
-      <TextInput
-        style={styles.input}
-        value={inputText}
-        onChangeText={setInputText}
-        placeholder="Type your message"
+    <SafeAreaView style={styles.container}>
+      <Header />
+      <FlatList
+        data={messages}
+        renderItem={({ item }) => <ChatMessage message={item.text} isBot={item.isBot} />}
+        keyExtractor={item => item.id}
+        style={styles.messageList}
       />
-      <Button title="Send" onPress={handleSend} />
-      <Text style={styles.response}>{responseText}</Text>
-    </View>
+      <ChatInput onSendMessage={handleSendMessage} />
+      <Footer />
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    backgroundColor: '#F5F5F5',
   },
-  title: {
-    fontSize: 24,
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    padding: 8,
-    marginBottom: 16,
-  },
-  response: {
-    marginTop: 16,
-    fontSize: 18,
+  messageList: {
+    flex: 1,
+    padding: 10,
   },
 });
 

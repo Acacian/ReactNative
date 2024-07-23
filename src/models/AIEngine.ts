@@ -7,12 +7,12 @@ class AIEngine {
     this.baseURL = 'http://172.17.0.1:5000'; // Docker host IP
   }
 
-  async predictIntent(text: string): Promise<string> {
+  async sendMessage(message: string): Promise<string> {
     try {
-      const response = await axios.post(`${this.baseURL}/predict`, { text });
-      return response.data.intent;
+      const response = await axios.post(`${this.baseURL}/chat`, { message });
+      return response.data.response;
     } catch (error) {
-      console.error('Error predicting intent:', error);
+      console.error('Error sending message:', error);
       throw error;
     }
   }

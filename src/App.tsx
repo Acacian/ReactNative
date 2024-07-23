@@ -15,8 +15,8 @@ const App = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home">
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Chatbot" component={ChatbotScreen} />
+        <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
+        <Stack.Screen name="Chatbot" component={ChatbotScreen} options={{ title: 'AI Chatbot' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
