@@ -4,37 +4,25 @@ import logging
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from deeppavlov import build_model
 from deeppavlov.core.commands.utils import parse_config
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 downloads_path = os.getenv('DOWNLOADS_PATH', '/app/downloads')
 os.environ['DOWNLOADS_PATH'] = downloads_path
 
-logging.info(f"DOWNLOADS_PATH: {downloads_path}")
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+logger.info(f"DOWNLOADS_PATH: {downloads_path}")
 
 with open("/app/deep_pavlov_config.json", "r") as config_file:
     config = json.load(config_file)
 
 config['dataset_reader']['data_path'] = config['dataset_reader']['data_path'].replace("{DOWNLOADS_PATH}", downloads_path)
 
-logging.info("Building intent classification model...")
+logger.info("Building intent classification model...")
 intent_model = build_model(config, download=False)
-logging.info("Intent classification model built successfully.")
+logger.info("Intent classification model built successfully.")
 
 # 훈련 데이터 로드
 with open('/app/combined_data.txt', 'r', encoding='utf-8') as f:
@@ -43,21 +31,6 @@ with open('/app/combined_data.txt', 'r', encoding='utf-8') as f:
 # TF-IDF 벡터라이저 초기화 및 훈련
 vectorizer = TfidfVectorizer()
 tfidf_matrix = vectorizer.fit_transform(response_data)
-
-class Request(BaseModel):
-    text: str
-
-class Response(BaseModel):
-    intent: str
-    response: str
-
-@app.post("/predict", response_model=Response)
-def predict(request: Request):
-    intent = intent_model([request.text])[0]
-    
-    response = generate_response(request.text)
-    
-    return Response(intent=intent, response=response)
 
 def generate_response(text):
     # 입력 텍스트를 TF-IDF 벡터로 변환
@@ -79,6 +52,5 @@ def generate_response(text):
     
     return response
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+def predict_intent(text):
+    return intent_model([text])[0]

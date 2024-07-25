@@ -56,4 +56,8 @@ RUN echo "Chrome version:" && google-chrome --version && \
 RUN python3 api/data_collection.py | tee /app/data_collection.log || (cat /app/data_collection.log && exit 1)
 RUN python3 api/train_model.py
 
-CMD ["python3", "api/main.py"]
+# 포트 노출
+EXPOSE 5000
+
+# 실행 명령어 변경
+CMD ["python3", "api/chat_api.py"]
