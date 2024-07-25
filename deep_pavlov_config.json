@@ -16,16 +16,17 @@
     "pipe": [
       {
         "class_name": "torch_transformers_preprocessor",
-        "vocab_file": "bert-base-uncased",
-        "max_seq_length": 128,
-        "do_lower_case": true,
+        "vocab_file": "bert-base-multilingual-cased",
+        "max_seq_length": 256,
+        "do_lower_case": false,
         "in": ["x"],
         "out": ["x"]
       },
       {
         "class_name": "torch_transformers_classifier",
         "n_classes": 7,
-        "pretrained_bert": "bert-base-uncased",
+        "pretrained_bert": "bert-base-multilingual-cased",
+        "dropout_rate": 0.1,
         "in": ["x"],
         "out": ["y_pred"],
         "save_path": "/app/models/bert_classifier",
@@ -35,21 +36,19 @@
     ]
   },
   "train": {
-    "epochs": 1,
-    "batch_size": 8,
+    "epochs": 5,
+    "batch_size": 16,
     "metrics": [
-      {
-        "name": "f1",
-        "inputs": ["y_pred", "y"]
-      }
+      {"name": "f1", "inputs": ["y_pred", "y"]},
+      {"name": "accuracy", "inputs": ["y_pred", "y"]}
     ],
     "validation_patience": 5,
-    "val_every_n_epochs": 0.1,
+    "val_every_n_epochs": 0.5,
     "log_every_n_batches": 10,
     "optimizer": "AdamW",
-    "learning_rate": 5e-5,
+    "learning_rate": 2e-5,
     "weight_decay": 0.01,
-    "bert_learning_rate": 2e-5,
+    "bert_learning_rate": 1e-5,
     "bert_weight_decay": 0.0
   }
 }

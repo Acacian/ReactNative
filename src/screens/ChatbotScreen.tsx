@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, StyleSheet, FlatList, Dimensions } from 'react-native';
 import ChatInput from '../components/ChatInput';
 import ChatMessage from '../components/ChatMessage';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-
-const API_URL = 'http://localhost:5000/predict';  // Docker 환경에 맞게 URL을 수정하세요
+import AIEngine from '../models/AIEngine';
 
 const ChatbotScreen = () => {
   const [messages, setMessages] = useState<Array<{ id: string; text: string; isBot: boolean }>>([]);
+  const aiEngine = useRef(new AIEngine()).current;
 
   const handleSendMessage = async (text: string) => {
     // 사용자 메시지 추가
@@ -18,24 +18,12 @@ const ChatbotScreen = () => {
     ]);
 
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        throw new Error('API request failed');
-      }
-
-      const data = await response.json();
+      const response = await aiEngine.sendMessage(text);
 
       // AI 응답 추가
       setMessages(prevMessages => [
         ...prevMessages,
-        { id: (Date.now() + 1).toString(), text: data.response, isBot: true }
+        { id: (Date.now() + 1).toString(), text: response, isBot: true }
       ]);
     } catch (error) {
       console.error('Error calling API:', error);
@@ -50,11 +38,12 @@ const ChatbotScreen = () => {
   return (
     <View style={styles.container}>
       <Header />
-      <ScrollView style={styles.chatContainer}>
-        {messages.map(message => (
-          <ChatMessage key={message.id} message={message.text} isBot={message.isBot} />
-        ))}
-      </ScrollView>
+      <FlatList
+        style={styles.chatContainer}
+        data={messages}
+        renderItem={({ item }) => <ChatMessage message={item.text} isBot={item.isBot} />}
+        keyExtractor={item => item.id}
+      />
       <ChatInput onSendMessage={handleSendMessage} />
       <Footer />
     </View>

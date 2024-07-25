@@ -52,12 +52,13 @@ RUN echo "Chrome version:" && google-chrome --version && \
     echo "ChromeDriver version:" && chromedriver --version && \
     which chromedriver
 
-# 데이터 수집 및 모델 훈련
+# 데이터 수집, 마이닝 및 모델 훈련
 RUN python3 api/data_collection.py | tee /app/data_collection.log || (cat /app/data_collection.log && exit 1)
+RUN python3 api/data_mining.py | tee /app/data_mining.log || (cat /app/data_mining.log && exit 1)
 RUN python3 api/train_model.py
 
 # 포트 노출
 EXPOSE 5000
 
-# 실행 명령어 변경
-CMD ["python3", "api/chat_api.py"]
+# API 서버 실행
+CMD ["python3", "/app/api/main.py"]
