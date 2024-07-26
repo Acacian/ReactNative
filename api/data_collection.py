@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 from webdriver_manager.chrome import ChromeDriverManager
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def extract_all_zips(directory):
     for root, dirs, files in os.walk(directory):
@@ -22,7 +23,7 @@ def extract_all_zips(directory):
                 file_path = os.path.join(root, file)
                 with zipfile.ZipFile(file_path, 'r') as zip_ref:
                     zip_ref.extractall(root)
-                logging.info(f"Extracted: {file_path}")
+                logger.info(f"Extracted: {file_path}")
 
 def read_text_files(directory):
     texts = []
@@ -30,7 +31,9 @@ def read_text_files(directory):
         for file in files:
             if file.endswith('.txt'):
                 with open(os.path.join(root, file), 'r', encoding='utf-8', errors='ignore') as f:
-                    texts.append(f.read())
+                    text = f.read()
+                    texts.append(text)
+                    logger.info(f"Read file: {os.path.join(root, file)}, Length: {len(text)} characters")
     return texts
 
 def fetch_novel_content(novel_id, max_pages=5, timeout=300):
@@ -42,21 +45,21 @@ def fetch_novel_content(novel_id, max_pages=5, timeout=300):
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     
-    logging.info(f"Setting up Chrome driver for novel ID: {novel_id}")
+    logger.info(f"Setting up Chrome driver for novel ID: {novel_id}")
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
 
     try:
         for page in range(1, max_pages + 1):
             url = f"{base_url}?book=%EC%84%B1%EC%9D%B8%EC%86%8C%EC%84%A4&spage={page}"
-            logging.info(f"Navigating to URL: {url}")
+            logger.info(f"Navigating to URL: {url}")
             driver.get(url)
             
             try:
                 WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "novel-detail-body")))
-                logging.info(f"Page {page} loaded successfully")
+                logger.info(f"Page {page} loaded successfully")
             except TimeoutException:
-                logging.warning(f"Timeout waiting for page {page} to load. Skipping this novel.")
+                logger.warning(f"Timeout waiting for page {page} to load. Skipping this novel.")
                 return content
 
             soup = BeautifulSoup(driver.page_source, "html.parser")
@@ -65,15 +68,15 @@ def fetch_novel_content(novel_id, max_pages=5, timeout=300):
             if novel_content:
                 text = novel_content.get_text().strip()
                 content.append(text)
-                logging.info(f"Collected content from page {page}")
+                logger.info(f"Collected content from page {page}, Length: {len(text)} characters")
             else:
-                logging.warning(f"No content found on page {page}")
+                logger.warning(f"No content found on page {page}")
                 break
 
             time.sleep(2)
 
     except Exception as e:
-        logging.exception(f"Error fetching content for novel ID {novel_id}: {e}")
+        logger.exception(f"Error fetching content for novel ID {novel_id}: {e}")
     finally:
         driver.quit()
 
@@ -85,7 +88,7 @@ def get_random_novel_ids(start_id, end_id, count):
 if __name__ == "__main__":
     extract_all_zips('/app/Korean_SNS_DATA')
     existing_data = read_text_files('/app/Korean_SNS_DATA')
-    logging.info(f"Read {len(existing_data)} existing text files")
+    logger.info(f"Read {len(existing_data)} existing text files")
 
     start_id = 13510000
     end_id = 13520000
@@ -93,19 +96,28 @@ if __name__ == "__main__":
     novel_ids = get_random_novel_ids(start_id, end_id, num_novels)
 
     crawled_data = []
-    for novel_id in novel_ids:
-        novel_content = fetch_novel_content(novel_id)
-        if novel_content:
-            crawled_data.extend(novel_content)
-            logging.info(f"Crawled novel ID {novel_id}: {len(novel_content)} pages")
-        else:
-            logging.warning(f"Skipped novel ID {novel_id}: No content found")
+    total_chars = sum(len(text) for text in existing_data)
+    logger.info(f"Initial total characters: {total_chars}")
+
+    while total_chars < 1000000:  # 최소 100만 글자를 목표로 설정
+        for novel_id in novel_ids:
+            novel_content = fetch_novel_content(novel_id)
+            if novel_content:
+                crawled_data.extend(novel_content)
+                total_chars += sum(len(text) for text in novel_content)
+                logger.info(f"Crawled novel ID {novel_id}: {len(novel_content)} pages, Total characters: {total_chars}")
+            else:
+                logger.warning(f"Skipped novel ID {novel_id}: No content found")
+            
+            if total_chars >= 1000000:
+                logger.info("Sufficient data collected. Stopping crawling.")
+                break
         
-        if len(crawled_data) > 10000:
-            logging.info("Sufficient data collected. Stopping crawling.")
-            break
+        if total_chars < 1000000:
+            logger.info("Not enough data collected. Getting new novel IDs.")
+            novel_ids = get_random_novel_ids(start_id, end_id, num_novels)
     
-    logging.info(f"Crawled {len(crawled_data)} new content pieces")
+    logger.info(f"Crawled {len(crawled_data)} new content pieces")
 
     all_data = existing_data + crawled_data
 
@@ -113,9 +125,14 @@ if __name__ == "__main__":
         for item in all_data:
             f.write(f"{item}\n\n---\n\n")
     
-    logging.info(f"Total {len(all_data)} items saved to combined_data.txt")
+    logger.info(f"Total {len(all_data)} items saved to combined_data.txt")
 
     data_size = os.path.getsize("/app/combined_data.txt") / (1024 * 1024)
-    logging.info(f"Total data size: {data_size:.2f} MB")
+    logger.info(f"Total data size: {data_size:.2f} MB")
 
-    logging.info("Data collection completed")
+    # 파일 내용 샘플 로깅
+    with open("/app/combined_data.txt", "r", encoding="utf-8") as f:
+        sample = f.read(1000)  # 처음 1000자만 읽기
+        logger.info(f"Sample of combined_data.txt:\n{sample}")
+
+    logger.info("Data collection completed")
