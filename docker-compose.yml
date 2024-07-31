@@ -1,10 +1,25 @@
 version: '3.7'
 
 services:
-  app:
+  python-api:
     build: .
     ports:
       - "5000:5000"
     volumes:
       - app_data:/app
     command: uvicorn api.main:app --host 0.0.0.0 --port 5000
+
+  spring-backend:
+    build:
+      context: ./spring_backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - spring_data:/app
+    depends_on:
+      - python-api
+
+volumes:
+  app_data:
+  spring_data:
