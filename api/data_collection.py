@@ -36,87 +36,117 @@ def read_text_files(directory):
                     logger.info(f"Read file: {os.path.join(root, file)}, Length: {len(text)} characters")
     return texts
 
-def fetch_novel_content(novel_id, max_pages=5, timeout=300):
+def bypass_captcha(driver):
+    try:
+        captcha = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "captcha-element"))
+        )
+        driver.execute_script("arguments[0].remove();", captcha)
+        logger.info("Captcha bypassed")
+    except:
+        logger.info("No captcha found or unable to bypass")
+
+def navigate_to_random_novel(driver):
+    try:
+        driver.get("https://booktoki347.com")
+        bypass_captcha(driver)
+        
+        adult_novel_link = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//a[contains(@href, '/novel?book=%EC%84%B1%EC%9D%B8%EC%86%8C%EC%84%A4')]"))
+        )
+        adult_novel_link.click()
+        
+        novels = WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".list-item"))
+        )
+        if novels:
+            random.choice(novels).click()
+        else:
+            logger.warning("No novels found")
+            return False
+        
+        return True
+    except Exception as e:
+        logger.exception(f"Error navigating to novel: {e}")
+        return False
+
+def fetch_novel_content(max_chapters=50, timeout=300):
     content = []
-    base_url = f"https://booktoki346.com/novel/{novel_id}"
     
     options = Options()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     
-    logger.info(f"Setting up Chrome driver for novel ID: {novel_id}")
+    logger.info("Setting up Chrome driver")
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
 
     try:
-        for page in range(1, max_pages + 1):
-            url = f"{base_url}?book=%EC%84%B1%EC%9D%B8%EC%86%8C%EC%84%A4&spage={page}"
-            logger.info(f"Navigating to URL: {url}")
-            driver.get(url)
-            
+        if not navigate_to_random_novel(driver):
+            return content
+
+        for chapter in range(1, max_chapters + 1):
             try:
-                WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "novel-detail-body")))
-                logger.info(f"Page {page} loaded successfully")
-            except TimeoutException:
-                logger.warning(f"Timeout waiting for page {page} to load. Skipping this novel.")
-                return content
+                chapter_links = WebDriverWait(driver, 10).until(
+                    EC.presence_of_all_elements_located((By.XPATH, "//a[contains(text(), '화')]"))
+                )
+                if chapter_links:
+                    random.choice(chapter_links).click()
+                else:
+                    logger.warning("No chapter links found")
+                    break
 
-            soup = BeautifulSoup(driver.page_source, "html.parser")
-            novel_content = soup.find("div", class_="novel-detail-body")
+                WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "novel_content")))
+                logger.info(f"Chapter {chapter} loaded successfully")
 
-            if novel_content:
-                text = novel_content.get_text().strip()
-                content.append(text)
-                logger.info(f"Collected content from page {page}, Length: {len(text)} characters")
-            else:
-                logger.warning(f"No content found on page {page}")
+                soup = BeautifulSoup(driver.page_source, "html.parser")
+                novel_content = soup.find("div", id="novel_content")
+
+                if novel_content:
+                    paragraphs = novel_content.find_all("p")
+                    chapter_text = "\n".join([p.get_text().strip() for p in paragraphs if p.get_text().strip()])
+                    content.append(chapter_text)
+                    logger.info(f"Collected content from chapter {chapter}, Length: {len(chapter_text)} characters")
+                else:
+                    logger.warning(f"No content found in chapter {chapter}")
+                    break
+
+                time.sleep(2)
+
+            except Exception as e:
+                logger.exception(f"Error fetching chapter {chapter}: {e}")
                 break
 
-            time.sleep(2)
-
     except Exception as e:
-        logger.exception(f"Error fetching content for novel ID {novel_id}: {e}")
+        logger.exception(f"Error fetching content: {e}")
     finally:
         driver.quit()
 
     return content
-
-def get_random_novel_ids(start_id, end_id, count):
-    return random.sample(range(start_id, end_id + 1), count)
 
 if __name__ == "__main__":
     extract_all_zips('/app/Korean_SNS_DATA')
     existing_data = read_text_files('/app/Korean_SNS_DATA')
     logger.info(f"Read {len(existing_data)} existing text files")
 
-    start_id = 13510000
-    end_id = 13520000
-    num_novels = 50
-    novel_ids = get_random_novel_ids(start_id, end_id, num_novels)
-
     crawled_data = []
     total_chars = sum(len(text) for text in existing_data)
     logger.info(f"Initial total characters: {total_chars}")
 
     while total_chars < 1000000:  # 최소 100만 글자를 목표로 설정
-        for novel_id in novel_ids:
-            novel_content = fetch_novel_content(novel_id)
-            if novel_content:
-                crawled_data.extend(novel_content)
-                total_chars += sum(len(text) for text in novel_content)
-                logger.info(f"Crawled novel ID {novel_id}: {len(novel_content)} pages, Total characters: {total_chars}")
-            else:
-                logger.warning(f"Skipped novel ID {novel_id}: No content found")
-            
-            if total_chars >= 1000000:
-                logger.info("Sufficient data collected. Stopping crawling.")
-                break
+        novel_content = fetch_novel_content()
+        if novel_content:
+            crawled_data.extend(novel_content)
+            total_chars += sum(len(text) for text in novel_content)
+            logger.info(f"Crawled new content: {len(novel_content)} chapters, Total characters: {total_chars}")
+        else:
+            logger.warning("No content found in this attempt")
         
-        if total_chars < 1000000:
-            logger.info("Not enough data collected. Getting new novel IDs.")
-            novel_ids = get_random_novel_ids(start_id, end_id, num_novels)
-    
+        if total_chars >= 1000000:
+            logger.info("Sufficient data collected. Stopping crawling.")
+            break
+
     logger.info(f"Crawled {len(crawled_data)} new content pieces")
 
     all_data = existing_data + crawled_data
