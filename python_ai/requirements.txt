@@ -1,17 +1,22 @@
+# AI 학습(Teach)
 fastapi
 uvicorn
-deeppavlov
+Cython>=0.29.24
+deeppavlov==1.6.0
 torch
 transformers
 requests
 beautifulsoup4
 selenium
-urllib3>=2.0.0
+urllib3==1.26.14
 chardet>=4.0.0
 webdriver-manager
 scikit-learn
 cloudscraper
+pandas==1.3.5
+
+# Cloudflare 우회 (Crawling)
 fake_useragent
 selenium_stealth
 undetected-chromedriver
-seleniumbase
+seleniumbase==4.13.0

@@ -2,25 +2,27 @@ version: '3.7'
 
 services:
   python-ai:
-    build: ./python_ai
+    build: 
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "5000:5000"
     volumes:
-      - python_ai_data:/app/data
+      - ./data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
+    command: python3 -m uvicorn main:app --host 0.0.0.0 --port 5000
 
   spring-backend:
     build:
-      context: ./spring_backend
+      context: ../spring_backend
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
     volumes:
-      - spring_data:/app
+      - ../spring_backend:/app
     depends_on:
       - python-ai
 
 volumes:
-  python_ai_data:
-  spring_data:
+  data:
