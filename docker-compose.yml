@@ -1,13 +1,14 @@
 version: '3.7'
 
 services:
-  python-api:
-    build: .
+  python-ai:
+    build: ./python_ai
     ports:
       - "5000:5000"
     volumes:
-      - app_data:/app
-    command: uvicorn api.main:app --host 0.0.0.0 --port 5000
+      - python_ai_data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
 
   spring-backend:
     build:
@@ -18,8 +19,8 @@ services:
     volumes:
       - spring_data:/app
     depends_on:
-      - python-api
+      - python-ai
 
 volumes:
-  app_data:
+  python_ai_data:
   spring_data:

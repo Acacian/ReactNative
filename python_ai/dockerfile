@@ -41,10 +41,7 @@ RUN python3 -m pip install --no-cache-dir -r /tmp/requirements.txt
 RUN mkdir -p $DOWNLOADS_PATH
 
 # 애플리케이션 코드 복사
-COPY api /app/api
-COPY deep_pavlov_config.json /app/
-COPY Korean_SNS_DATA /app/Korean_SNS_DATA
-
+COPY . /app
 WORKDIR /app
 
 # Chrome 버전 확인
@@ -52,12 +49,12 @@ RUN echo "Chrome version:" && google-chrome --version
 
 # 데이터 수집, 마이닝 및 모델 훈련
 RUN Xvfb :99 -ac & \
-    python3 api/data_collection.py | tee /app/data_collection.log || (cat /app/data_collection.log && exit 1)
-RUN python3 api/data_mining.py | tee /app/data_mining.log || (cat /app/data_mining.log && exit 1)
-RUN python3 api/train_model.py
+    python3 data_collection.py | tee /app/data_collection.log || (cat /app/data_collection.log && exit 1)
+RUN python3 data_mining.py | tee /app/data_mining.log || (cat /app/data_mining.log && exit 1)
+RUN python3 train_model.py
 
 # 포트 노출
 EXPOSE 5000
 
 # API 서버 실행
-CMD ["python3", "-m", "uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "5000"]
+CMD ["python3", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
