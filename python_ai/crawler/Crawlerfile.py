@@ -5,6 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+from bs4 import BeautifulSoup
 import subprocess
 import time
 import random
@@ -60,24 +61,37 @@ def crawl_novel(novel_url, novel_title):
                     continue
                 
                 print(f"크롤링 중: {novel_title} - {chapter_title}")
-                chapter.click()
+                chapter_url = chapter.get_attribute('href')
+                driver.get(chapter_url)
                 random_sleep()
                 
-                content = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "div.x229f860fec"))
-                )
+                # HTML 소스 가져오기
+                html_source = driver.page_source
+                soup = BeautifulSoup(html_source, 'html.parser')
                 
-                # 여기서 content.text를 저장하거나 처리합니다
-                with open(f"{novel_title} - {chapter_title}.txt", "w", encoding="utf-8") as f:
-                    f.write(content.text)
+                # novel_content div 찾기
+                novel_content = soup.find('div', id='novel_content')
+                
+                if novel_content:
+                    # <p> 태그 내용만 추출
+                    paragraphs = novel_content.find_all('p')
+                    content = '\n'.join([p.get_text(strip=True) for p in paragraphs])
+                    
+                    # 내용 저장
+                    with open(f"{novel_title} - {chapter_title}.txt", encoding="utf-8") as f:
+                        f.write(content)
+                else:
+                    print(f"소설 내용을 찾을 수 없습니다: {chapter_title}")
                 
                 driver.back()
                 random_sleep()
             
-            next_page = driver.find_elements(By.CSS_SELECTOR, "a.next")
+            next_page = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "a.next"))
+            )
             if not next_page:
                 break
-            next_page[0].click()
+            next_page.click()
             random_sleep()
         except Exception as e:
             print(f"에러 발생: {e}")
@@ -103,7 +117,7 @@ try:
 except Exception as e:
     print(f"에러 발생: {e}")
     print("현재 페이지 소스:")
-    print(driver.page_source[:1000])  # 처음 1000자만 출력
+    print(driver.page_source[:1000])
 
 print("작업이 완료되었습니다. 브라우저를 닫으려면 Enter 키를 누르세요...")
 input()
