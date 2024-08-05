@@ -1,9 +1,9 @@
 import os
 import logging
 import numpy as np
-from scikit-learn.feature_extraction.text import TfidfVectorizer
-from scikit-learn.cluster import KMeans
-from scikit-learn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+from sklearn.model_selection import train_test_split
 from transformers import BertTokenizer, BertForSequenceClassification
 import torch
 from torch.utils.data import DataLoader, TensorDataset
@@ -17,11 +17,10 @@ def load_data(file_path):
     return data
 
 def preprocess_data(data):
-    # 여기에 필요한 전처리 단계를 추가
-    # 예: 불용어 제거, 특수문자 제거 등
-    return data
+    # 간단한 전처리: 줄바꿈 제거 및 공백 정리
+    return [' '.join(item.split()) for item in data]
 
-def perform_clustering(data, n_clusters=5):
+def perform_clustering(data, n_clusters=2):  # 클러스터 수를 2로 변경 (테스트 데이터가 2개의 이야기이므로)
     vectorizer = TfidfVectorizer(max_features=1000)
     X = vectorizer.fit_transform(data)
     
@@ -43,8 +42,6 @@ def analyze_clusters(data, labels, vectorizer):
         logging.info(f"Top keywords: {', '.join(top_keywords)}")
 
 def prepare_emotion_data(data, labels):
-    # 여기서 감정 레이블을 자동으로 할당하는 로직을 구현
-    # 예를 들어, 클러스터별로 가장 빈번한 감정 단어를 기반으로 레이블 할당
     emotion_labels = ['joy', 'sadness', 'anger', 'fear', 'neutral']
     assigned_emotions = [emotion_labels[label % len(emotion_labels)] for label in labels]
     return list(zip(data, assigned_emotions))
@@ -52,31 +49,26 @@ def prepare_emotion_data(data, labels):
 def train_emotion_classifier(data_with_emotions):
     texts, emotions = zip(*data_with_emotions)
     
-    # BERT 토크나이저 및 모델 초기화
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     model = BertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=len(set(emotions)))
 
-    # 데이터 인코딩
     encodings = tokenizer(texts, truncation=True, padding=True, max_length=512, return_tensors='pt')
-    labels = torch.tensor([emotion_labels.index(e) for e in emotions])
+    labels = torch.tensor([list(set(emotions)).index(e) for e in emotions])
 
-    # 데이터셋 분할
     train_encodings, val_encodings, train_labels, val_labels = train_test_split(
         encodings['input_ids'], labels, test_size=0.2, random_state=42
     )
 
-    # 데이터로더 생성
     train_dataset = TensorDataset(train_encodings, train_labels)
     val_dataset = TensorDataset(val_encodings, val_labels)
-    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=16)
+    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True)  # 배치 크기를 2로 변경
+    val_loader = DataLoader(val_dataset, batch_size=2)
 
-    # 모델 훈련
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 
-    for epoch in range(3):  # 3 에폭 동안 훈련
+    for epoch in range(3):
         model.train()
         for batch in train_loader:
             optimizer.zero_grad()
@@ -86,13 +78,12 @@ def train_emotion_classifier(data_with_emotions):
             loss.backward()
             optimizer.step()
 
-    # 모델 저장
     model.save_pretrained('/app/emotion_classifier')
     tokenizer.save_pretrained('/app/emotion_classifier')
     logging.info("Emotion classifier trained and saved.")
 
 if __name__ == "__main__":
-    data = load_data("/app/combined_data.txt")
+    data = load_data("/app/test_novel.txt")
     preprocessed_data = preprocess_data(data)
     
     labels, vectorizer = perform_clustering(preprocessed_data)

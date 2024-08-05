@@ -1,5 +1,0 @@
-//TODO
-
-rootProject.name = 'spring_backend'
-
-include 'user-service'

@@ -86,7 +86,7 @@ def crawl_novel(novel_url, novel_title):
                     # 내용 중복 검사
                     if first_sentences != previous_first_sentences:
                         file_name = f"{novel_dir}/{chapter_title}.txt"
-                        with open(file_name, "w", encoding="utf-8") as f:
+                        with open(file_name, encoding="utf-8") as f:
                             f.write(content)
                         previous_first_sentences = first_sentences
                     else:

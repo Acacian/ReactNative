@@ -22,13 +22,14 @@ config['dataset_reader']['data_path'] = config['dataset_reader']['data_path'].re
 emotion_classifier = pipeline('text-classification', model='/app/emotion_classifier')
 
 def preprocess_with_emotion(text):
-    # 텍스트에 대한 감정 분석 수행
     emotion = emotion_classifier(text)[0]['label']
-    # 원본 텍스트에 감정 정보 추가
     return f"[EMOTION={emotion}] {text}"
 
-# 데이터 전처리 함수 수정
 config['dataset_reader']['preprocessor'] = preprocess_with_emotion
+
+# 테스트 데이터 준비
+with open("/app/test_novel.txt", 'r', encoding='utf-8') as f:
+    test_data = f.read().split('\n\n---\n\n')
 
 # 모델 훈련
 logging.info("Starting model training...")
@@ -38,24 +39,22 @@ try:
 except Exception as e:
     logging.exception(f"Error during model training: {e}")
 
-# 훈련된 모델을 사용한 간단한 테스트
+# 훈련된 모델을 사용한 테스트
 from deeppavlov import build_model
 
 model = build_model(config)
 
-test_questions = [
-    "오늘 기분이 너무 좋아!",
-    "최근에 힘든 일이 많았어",
-    "새로운 프로젝트를 시작하게 되어 설레",
-    "친구와 크게 다퉜어"
-]
-
-for question in test_questions:
-    emotion = emotion_classifier(question)[0]['label']
-    response = model([question])
-    logging.info(f"Q: {question}")
-    logging.info(f"Detected Emotion: {emotion}")
-    logging.info(f"A: {response[0]}")
-    logging.info("---")
+for i, story in enumerate(test_data):
+    logging.info(f"Testing story {i+1}")
+    sentences = story.split('.')[:5]  # 각 이야기의 처음 5문장만 사용
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if sentence:
+            emotion = emotion_classifier(sentence)[0]['label']
+            response = model([sentence])
+            logging.info(f"Q: {sentence}")
+            logging.info(f"Detected Emotion: {emotion}")
+            logging.info(f"A: {response[0]}")
+            logging.info("---")
 
 logging.info("Test completed")
