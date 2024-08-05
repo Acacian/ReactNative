@@ -10,6 +10,7 @@ import subprocess
 import time
 import random
 import re
+import os
 
 # URL 설정
 url = "https://booktoki347.com/novel?book=%EC%84%B1%EC%9D%B8%EC%86%8C%EC%84%A4"
@@ -49,6 +50,11 @@ def crawl_novel(novel_url, novel_title):
     driver.get(novel_url)
     random_sleep()
     
+    novel_dir = re.sub(r'[\\/*?:"<>|]', "", novel_title)
+    os.makedirs(novel_dir, exist_ok=True)
+    
+    previous_first_sentences = ""
+    
     while True:
         try:
             chapters = WebDriverWait(driver, 10).until(
@@ -65,21 +71,26 @@ def crawl_novel(novel_url, novel_title):
                 driver.get(chapter_url)
                 random_sleep()
                 
-                # HTML 소스 가져오기
                 html_source = driver.page_source
                 soup = BeautifulSoup(html_source, 'html.parser')
                 
-                # novel_content div 찾기
                 novel_content = soup.find('div', id='novel_content')
                 
                 if novel_content:
-                    # <p> 태그 내용만 추출
                     paragraphs = novel_content.find_all('p')
                     content = '\n'.join([p.get_text(strip=True) for p in paragraphs])
                     
-                    # 내용 저장
-                    with open(f"{novel_title} - {chapter_title}.txt", encoding="utf-8") as f:
-                        f.write(content)
+                    # 처음 두 문장 추출
+                    first_sentences = '. '.join(content.split('.')[:2])
+                    
+                    # 내용 중복 검사
+                    if first_sentences != previous_first_sentences:
+                        file_name = f"{novel_dir}/{chapter_title}.txt"
+                        with open(file_name, "w", encoding="utf-8") as f:
+                            f.write(content)
+                        previous_first_sentences = first_sentences
+                    else:
+                        print(f"중복 내용 감지: {chapter_title}")
                 else:
                     print(f"소설 내용을 찾을 수 없습니다: {chapter_title}")
                 
