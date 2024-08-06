@@ -5,6 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import StaleElementReferenceException
 from bs4 import BeautifulSoup
 import subprocess
 import time
@@ -23,7 +24,7 @@ print(f"Chrome 브라우저를 실행하고 {url}로 이동합니다. Cloudflare
 subprocess.Popen(f'C:\Program Files\Google\Chrome\Application\chrome.exe --remote-debugging-port=9222 --user-data-dir="{user_data_dir}" {url}')
 
 # 스크립트 시작 전 대기 시간 (초)
-INITIAL_WAIT_TIME = 20
+INITIAL_WAIT_TIME = 15
 print(f"{INITIAL_WAIT_TIME}초 동안 Cloudflare 검증을 완료해주세요. 그 후 크롤링을 시작합니다.")
 time.sleep(INITIAL_WAIT_TIME)
 
@@ -40,7 +41,7 @@ driver.maximize_window()
 # 추가 헤더 설정
 driver.execute_cdp_cmd('Network.setExtraHTTPHeaders', {"headers": {"Accept-Language": "en-US,en;q=0.9"}})
 
-def random_sleep(min_time=3, max_time=7):
+def random_sleep(min_time=1.5, max_time=3):
     time.sleep(random.uniform(min_time, max_time))
 
 # 여기서부터 크롤링 로직을 시작합니다.
@@ -57,45 +58,52 @@ def crawl_novel(novel_url, novel_title):
     
     while True:
         try:
-            chapters = WebDriverWait(driver, 10).until(
+            WebDriverWait(driver, 5).until(
                 EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a.item-subject"))
             )
+            chapters = driver.find_elements(By.CSS_SELECTOR, "a.item-subject")
             
             for chapter in chapters:
-                chapter_title = chapter.text
-                if not re.search(r'\d+화', chapter_title):
-                    continue
-                
-                print(f"크롤링 중: {novel_title} - {chapter_title}")
-                chapter_url = chapter.get_attribute('href')
-                driver.get(chapter_url)
-                random_sleep()
-                
-                html_source = driver.page_source
-                soup = BeautifulSoup(html_source, 'html.parser')
-                
-                novel_content = soup.find('div', id='novel_content')
-                
-                if novel_content:
-                    paragraphs = novel_content.find_all('p')
-                    content = '\n'.join([p.get_text(strip=True) for p in paragraphs])
+                try:
+                    chapter_title = chapter.text
+                    if not re.search(r'\d+화', chapter_title):
+                        continue
                     
-                    # 처음 두 문장 추출
-                    first_sentences = '. '.join(content.split('.')[:2])
+                    print(f"크롤링 중: {novel_title} - {chapter_title}")
+                    chapter_url = chapter.get_attribute('href')
+                    driver.get(chapter_url)
+                    random_sleep()
+
+                    WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.ID, "novel_content"))
+                    )
                     
-                    # 내용 중복 검사
-                    if first_sentences != previous_first_sentences:
-                        file_name = f"{novel_dir}/{chapter_title}.txt"
-                        with open(file_name, encoding="utf-8") as f:
-                            f.write(content)
-                        previous_first_sentences = first_sentences
+                    html_source = driver.page_source
+                    soup = BeautifulSoup(html_source, 'html.parser')
+                    
+                    novel_content = soup.find('div', id='novel_content')
+                    
+                    if novel_content:
+                        paragraphs = novel_content.find_all('p')
+                        content = '\n'.join([p.get_text(strip=True) for p in paragraphs])
+                        
+                        first_sentences = '. '.join(content.split('.')[:2])
+                        
+                        if first_sentences != previous_first_sentences:
+                            file_name = os.path.join(novel_dir, f"{chapter_title}.txt")
+                            with open(file_name, 'w', encoding="utf-8") as f:
+                                f.write(content)
+                            previous_first_sentences = first_sentences
+                        else:
+                            print(f"중복 내용 감지: {chapter_title}")
                     else:
-                        print(f"중복 내용 감지: {chapter_title}")
-                else:
-                    print(f"소설 내용을 찾을 수 없습니다: {chapter_title}")
-                
-                driver.back()
-                random_sleep()
+                        print(f"소설 내용을 찾을 수 없습니다: {chapter_title}")
+                    
+                    driver.back()
+                    random_sleep()
+                except StaleElementReferenceException:
+                    print(f"요소가 낡았습니다. 다시 시도합니다: {chapter_title}")
+                    break  # 현재 페이지의 크롤링을 중단하고 다음 페이지로 이동
             
             next_page = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "a.next"))

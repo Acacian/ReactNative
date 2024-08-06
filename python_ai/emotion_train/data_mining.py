@@ -83,7 +83,7 @@ def train_emotion_classifier(data_with_emotions):
     logging.info("Emotion classifier trained and saved.")
 
 if __name__ == "__main__":
-    data = load_data("/app/test_novel.txt")
+    data = load_data("/app/combined_data.txt")
     preprocessed_data = preprocess_data(data)
     
     labels, vectorizer = perform_clustering(preprocessed_data)
