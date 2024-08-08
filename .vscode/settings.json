@@ -1,0 +1,12 @@
+{
+    "java.autobuild.enabled": false,
+    "java.import.gradle.enabled": false,
+    "java.configuration.updateBuildConfiguration": "disabled",
+    "gradle.autoDetect": "off",
+    "files.exclude": {
+        "**/.project": true,
+        "**/.classpath": true,
+        "**/.settings": true,
+        "**/bin": true
+    }
+}
